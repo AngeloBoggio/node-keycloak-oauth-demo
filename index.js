@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const { checkAuth } = require("./auth");
 
 const app = express();
 const port = 8005;
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
 app.get("/login", (req, res) => {
   const authUrl = `http://localhost:8080/realms/my-test-world/protocol/openid-connect/auth?client_id=${CLIENT_ID}&scope=openid&redirect_uri=http://localhost:8005/keycloak/callback&response_type=code`;
   console.log("Redirecting user to Keycloak...");
+  console.log(`${CLIENT_ID} id: ${CLIENT_SECRET}`);
   res.redirect(authUrl);
 });
 
@@ -52,11 +54,10 @@ app.get("/keycloak/callback", async (req, res) => {
 
     const accessToken = tokenResponse.data.access_token;
 
-    res.send(`
-      <h1>Success!</h1>
-      <p>Here is your access token:</p>
-      <pre style="word-wrap: break-word;">${accessToken}</pre>
-    `);
+    res.json({
+      message: "Login successful! Copy this token.",
+      acces_token: accessToken,
+    });
   } catch (error) {
     console.error("Error during token exchange:", error.message);
 
@@ -69,6 +70,13 @@ app.get("/keycloak/callback", async (req, res) => {
         .json({ error: "Internal Server Error", message: error.message });
     }
   }
+});
+
+app.get("/test-auth", checkAuth, (req, res) => {
+  res.json({
+    message: "Middleware passed! Token decoded",
+    user_payload: req.user,
+  });
 });
 
 app.listen(port, () => {
